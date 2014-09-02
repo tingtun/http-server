@@ -40,7 +40,8 @@ import Network.HTTP.Headers   -- for re-export above
 import Network.URI
 import Network.URL
 import Control.Concurrent(forkIO)
-import Control.Exception(catch,SomeException)
+import Control.Concurrent.Async
+import Control.Exception(catch,SomeException,bracket)
 import Data.Maybe(fromMaybe)
 
 
@@ -103,16 +104,17 @@ server = serverWith defaultConfig
 --  Requests are handled in separate threads.
 serverWith :: HStream a => Config -> Handler a -> IO ()
 serverWith conf handler = withSocketsDo $
-  do s <- server_init conf
-     loop s `catch` \e ->
-       logError lg ("Unexpected (0): " ++ show (e :: SomeException))
-     Socket.close s
+     bracket
+       (server_init conf)
+       Socket.close
+       loop
   where
   lg = srvLog conf
 
   loop s = do (client_sock,sock_addr) <- accept s
-              _ <- forkIO (client client_sock sock_addr)
-              loop s
+              withAsync (client client_sock sock_addr) $ \a -> do
+                  link a
+                  loop s
 
   -- get_request :: HandleStream a -> IO (Maybe (URL, Request a))
   get_request sock =
