@@ -16,7 +16,7 @@ module Network.HTTP.Server.Logger
   , showLogItem, readLogItem, filterLog
   ) where
 
-import System.IO (Handle,stdout,stderr,hFlush)
+import System.IO (Handle,stdout,stderr,hFlush,hPutStrLn)
 
 -- | A type used by the server to report various events.
 -- Useful for debugging.
